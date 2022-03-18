@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 authorization do
   role :guest do
     # add permissions for guests here, e.g.

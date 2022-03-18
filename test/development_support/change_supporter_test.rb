@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 require File.join(File.dirname(__FILE__), %w[.. .. lib declarative_authorization development_support change_supporter])
 
@@ -24,7 +26,11 @@ class ChangeSupporterTest
       assert !permit?(:read, context: :permissions, user: users[1])
     end
 
-    assert approaches.any? { |approach| approach.steps.any? { |step| step.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignPrivilegeToRoleAction } }
+    assert approaches.any? { |approach|
+             approach.steps.any? do |step|
+               step.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignPrivilegeToRoleAction)
+             end
+           }
   end
 
   def test_adding_permission_with_privilege_hierarchy
@@ -48,7 +54,7 @@ class ChangeSupporterTest
     end
 
     assert approaches.any? { |approach|
-      (approach.steps.first.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignPrivilegeToRoleAction) &&
+      approach.steps.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignPrivilegeToRoleAction) &&
         (approach.steps.first.privilege == :manage)
     }
   end
@@ -75,7 +81,9 @@ class ChangeSupporterTest
       assert !permit?(:read, context: :permissions, user: users[1])
     end
 
-    assert approaches.any? { |approach| approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction }
+    assert approaches.any? { |approach|
+             approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction)
+           }
   end
 
   def test_adding_permission_by_assigning_role_with_privilege_hierarchy
@@ -99,7 +107,9 @@ class ChangeSupporterTest
       assert permit?(:read, context: :permissions, user: users.first)
     end
 
-    assert approaches.any? { |approach| approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction }
+    assert approaches.any? { |approach|
+             approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction)
+           }
   end
 
   def test_adding_permission_by_assigning_role_many
@@ -144,7 +154,9 @@ class ChangeSupporterTest
       assert !permit?(:read, context: :permissions, user: users[1])
     end
 
-    assert approaches.any? { |approach| approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction }
+    assert approaches.any? { |approach|
+             approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction)
+           }
   end
 
   def test_adding_permission_with_new_role
@@ -166,7 +178,9 @@ class ChangeSupporterTest
       assert !permit?(:read, context: :permissions, user: users[1])
     end
 
-    assert approaches.any? { |approach| approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::CreateAndAssignRoleToUserAction }
+    assert approaches.any? { |approach|
+             approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::CreateAndAssignRoleToUserAction)
+           }
   end
 
   def test_adding_permission_with_new_role_complex
@@ -191,7 +205,9 @@ class ChangeSupporterTest
       assert !permit?(:read, context: :permissions, user: users[0])
     end
 
-    assert approaches.any? { |approach| approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::CreateAndAssignRoleToUserAction }
+    assert approaches.any? { |approach|
+             approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::CreateAndAssignRoleToUserAction)
+           }
   end
 
   def test_adding_permission_with_assigning_role_and_adding_permission
@@ -212,7 +228,9 @@ class ChangeSupporterTest
     end
 
     refute_equal 0, approaches.length
-    assert approaches.any? { |approach| approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::AddPrivilegeAndAssignRoleToUserAction }
+    assert approaches.any? { |approach|
+             approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AddPrivilegeAndAssignRoleToUserAction)
+           }
   end
 
   def test_adding_permission_with_assigning_role_and_adding_permission_with_hierarchy
@@ -242,7 +260,7 @@ class ChangeSupporterTest
     # Don't try to assign any permissions to higher_role, it already has the
     # necessary permissions through the hierarchies
     assert approaches.none? { |approach|
-      approach.steps.first.class == Authorization::DevelopmentSupport::ChangeSupporter::AddPrivilegeAndAssignRoleToUserAction
+      approach.steps.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AddPrivilegeAndAssignRoleToUserAction)
     }
   end
 
@@ -265,9 +283,13 @@ class ChangeSupporterTest
     end
 
     # either: remove that privilege from :test_role
-    assert approaches[0, 2].any? { |approach| (approach.changes.length == 1) && (approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::RemovePrivilegeFromRoleAction) }
+    assert approaches[0, 2].any? { |approach|
+             (approach.changes.length == 1) && approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::RemovePrivilegeFromRoleAction)
+           }
     # or: remove that role from the user
-    assert approaches[0, 2].any? { |approach| (approach.changes.length == 1) && (approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::RemoveRoleFromUserAction) }
+    assert approaches[0, 2].any? { |approach|
+             (approach.changes.length == 1) && approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::RemoveRoleFromUserAction)
+           }
   end
 
   def test_removing_permission_privilege_hierarchy
@@ -291,7 +313,9 @@ class ChangeSupporterTest
       assert !permit?(:read, context: :permissions, user: users.first)
     end
 
-    assert approaches[0, 2].any? { |approach| (approach.changes.length == 1) && (approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::RemovePrivilegeFromRoleAction) }
+    assert approaches[0, 2].any? { |approach|
+             (approach.changes.length == 1) && approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::RemovePrivilegeFromRoleAction)
+           }
   end
 
   def test_removing_permission_with_constraint
@@ -315,9 +339,13 @@ class ChangeSupporterTest
     end
 
     # either: remove that privilege from :test_role
-    assert approaches[0, 2].any? { |approach| (approach.changes.length == 1) && (approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::RemovePrivilegeFromRoleAction) }
+    assert approaches[0, 2].any? { |approach|
+             (approach.changes.length == 1) && approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::RemovePrivilegeFromRoleAction)
+           }
     # or: remove that role from the user
-    assert approaches[0, 2].any? { |approach| (approach.changes.length == 1) && (approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::RemoveRoleFromUserAction) }
+    assert approaches[0, 2].any? { |approach|
+             (approach.changes.length == 1) && approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::RemoveRoleFromUserAction)
+           }
   end
 
   def test_moving_permission
@@ -342,8 +370,16 @@ class ChangeSupporterTest
       assert permit?(:read, context: :permissions, user: users[1])
     end
 
-    assert approaches.any? { |approach| approach.steps.find { |step| step.class == Authorization::DevelopmentSupport::ChangeSupporter::RemovePrivilegeFromRoleAction } }
-    assert approaches.any? { |approach| approach.steps.find { |step| step.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignPrivilegeToRoleAction } }
+    assert approaches.any? { |approach|
+             approach.steps.find do |step|
+               step.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::RemovePrivilegeFromRoleAction)
+             end
+           }
+    assert approaches.any? { |approach|
+             approach.steps.find do |step|
+               step.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignPrivilegeToRoleAction)
+             end
+           }
   end
 
   def test_removing_permission_adding_role
@@ -484,14 +520,19 @@ class ChangeSupporterTest
     user_to_remove_permission_from = MockUser.new(:test_role)
     user_to_remove_permission_from_2 = MockUser.new(:test_role)
 
-    approaches = analyzer.find_approaches_for(users: [user_to_remove_permission_from, user_to_remove_permission_from_2]) do
+    approaches = analyzer.find_approaches_for(users: [user_to_remove_permission_from,
+                                                      user_to_remove_permission_from_2]) do
       assert !permit?(:read, context: :permissions, user: users.first)
       assert !permit?(:read, context: :permissions, user: users[1])
     end
 
     assert approaches.none? { |approach|
-      approach.steps.any? { |step| step.class == Authorization::DevelopmentSupport::ChangeSupporter::RemoveRoleFromUserAction } &&
-        approach.steps.any? { |step| step.class == Authorization::DevelopmentSupport::ChangeSupporter::RemovePrivilegeFromRoleAction }
+      approach.steps.any? do |step|
+        step.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::RemoveRoleFromUserAction)
+      end &&
+        approach.steps.any? do |step|
+          step.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::RemovePrivilegeFromRoleAction)
+        end
     }
   end
 
@@ -517,7 +558,11 @@ class ChangeSupporterTest
     end
 
     refute_equal 0, approaches.length
-    assert approaches.none? { |approach| approach.steps.any? { |step| step.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction } }
+    assert approaches.none? { |approach|
+             approach.steps.any? do |step|
+               step.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction)
+             end
+           }
   end
 
   def test_prohibited_actions_role_to_any_user
@@ -542,7 +587,11 @@ class ChangeSupporterTest
     end
 
     refute_equal 0, approaches.length
-    assert approaches.none? { |approach| approach.steps.any? { |step| (step.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction) && (step.role == :test_role) } }
+    assert approaches.none? { |approach|
+             approach.steps.any? do |step|
+               step.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction) && (step.role == :test_role)
+             end
+           }
   end
 
   def test_prohibited_actions_permission_to_role
@@ -567,7 +616,11 @@ class ChangeSupporterTest
     end
 
     refute_equal 0, approaches.length
-    assert approaches.none? { |approach| approach.steps.any? { |step| step.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignPrivilegeToRoleAction } }
+    assert approaches.none? { |approach|
+             approach.steps.any? do |step|
+               step.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignPrivilegeToRoleAction)
+             end
+           }
   end
 
   def test_prohibited_actions_remove_role
@@ -585,12 +638,17 @@ class ChangeSupporterTest
     user_to_remove_permission = MockUser.new(:test_role)
 
     approaches = analyzer.find_approaches_for(users: [user_to_remove_permission],
-                                              prohibited_actions: [[:remove_role_from_user, :test_role, user_to_remove_permission.login]]) do
+                                              prohibited_actions: [[:remove_role_from_user, :test_role,
+                                                                    user_to_remove_permission.login]]) do
       assert !permit?(:read, context: :permissions, user: users.first)
     end
 
     refute_equal 0, approaches.length
-    assert approaches.none? { |approach| approach.steps.any? { |step| step.class == Authorization::DevelopmentSupport::ChangeSupporter::RemoveRoleFromUserAction } }
+    assert approaches.none? { |approach|
+             approach.steps.any? do |step|
+               step.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::RemoveRoleFromUserAction)
+             end
+           }
   end
 
   def test_affected_users
@@ -617,8 +675,11 @@ class ChangeSupporterTest
     end
 
     assert approaches.any? { |approach|
-        approach.steps.any? { |step| step.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignPrivilegeToRoleAction } &&
-          approach.affected_users(engine, all_users, :read, :permissions).length == 1 }
+             approach.steps.any? do |step|
+               step.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignPrivilegeToRoleAction)
+             end &&
+               approach.affected_users(engine, all_users, :read, :permissions).length == 1
+           }
   end
 
   def test_affected_users_with_user_change
@@ -645,8 +706,9 @@ class ChangeSupporterTest
     end
 
     assert approaches.any? { |approach|
-        approach.changes.first.class == Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction &&
-          approach.affected_users(engine, all_users, :read, :permissions).length == 1 }
+             approach.changes.first.instance_of?(Authorization::DevelopmentSupport::ChangeSupporter::AssignRoleToUserAction) &&
+               approach.affected_users(engine, all_users, :read, :permissions).length == 1
+           }
   end
 
   def test_group_approaches

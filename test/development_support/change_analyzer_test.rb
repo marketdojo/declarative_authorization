@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 require File.join(File.dirname(__FILE__), %w[.. .. lib declarative_authorization development_support change_analyzer])
 
@@ -30,7 +32,11 @@ class ChangeAnalyzerTest < Test::Unit::TestCase
     end
 
     # approaches.each {|approach| p approach}
-    assert approaches.any? { |approach| approach.steps.any? { |step| (step.first == :add_privilege) && (step.last.to_sym == :test_role_2) } }
+    assert approaches.any? { |approach|
+             approach.steps.any? do |step|
+               (step.first == :add_privilege) && (step.last.to_sym == :test_role_2)
+             end
+           }
   end
 
   def test_adding_permission_by_assigning_role
@@ -134,9 +140,13 @@ class ChangeAnalyzerTest < Test::Unit::TestCase
     end
 
     # either: remove that privilege from :test_role
-    assert approaches[0, 2].any? { |approach| (approach.changes.length == 1) && (approach.changes.first.first == :remove_privilege) }
+    assert approaches[0, 2].any? { |approach|
+             (approach.changes.length == 1) && (approach.changes.first.first == :remove_privilege)
+           }
     # or: remove that role from the user
-    assert approaches[0, 2].any? { |approach| (approach.changes.length == 1) && (approach.changes.first.first == :remove_role_from_user) }
+    assert approaches[0, 2].any? { |approach|
+             (approach.changes.length == 1) && (approach.changes.first.first == :remove_role_from_user)
+           }
   end
 
   def test_moving_permission

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require File.join(File.dirname(__FILE__), %w[development_support])
 
 module Authorization
@@ -33,7 +35,7 @@ module Authorization
         strategy = case [change_action, type]
                    when %i[remove permission]
                      %i[remove_role_from_user remove_privilege add_privilege
-add_role assign_role_to_user]
+                        add_role assign_role_to_user]
                    when %i[add permission]
                      %i[add_role add_privilege assign_role_to_user]
                    else
@@ -92,6 +94,7 @@ add_role assign_role_to_user]
 
       class Approach
         attr_reader :steps, :engine, :users
+
         def initialize(engine, users, steps)
           @engine = engine
           @users = users
@@ -149,16 +152,22 @@ add_role assign_role_to_user]
           #    other.approach.users.index(other[idx])
           # instead of user.login
           other.is_a?(Array) && other.length == length &&
-          (0...length).all? do |idx|
-            self[idx].class == other[idx].class &&
-            ((self[idx].respond_to?(:to_sym) && self[idx].to_sym == other[idx].to_sym) ||
-            (self[idx].respond_to?(:login) && self[idx].login == other[idx].login) ||
-            self[idx] == other[idx])
-          end
+            (0...length).all? do |idx|
+              self[idx].class == other[idx].class &&
+                ((self[idx].respond_to?(:to_sym) && self[idx].to_sym == other[idx].to_sym) ||
+                (self[idx].respond_to?(:login) && self[idx].login == other[idx].login) ||
+                self[idx] == other[idx])
+            end
         end
 
         def inspect
-          collect { |info| info.respond_to?(:to_sym) ? info.to_sym : (info.respond_to?(:login) ? info.login : info.class.name) }.inspect
+          collect do |info|
+            if info.respond_to?(:to_sym)
+              info.to_sym
+            else
+              (info.respond_to?(:login) ? info.login : info.class.name)
+            end
+          end.inspect
         end
       end
 
@@ -173,6 +182,7 @@ add_role assign_role_to_user]
         #  puts "SKIPPING #{next_in_strategy}; #{candidate.inspect}"
         # end
         return if @seen_states.include?([candidate.state_hash, next_in_strategy])
+
         @seen_states << [candidate.state_hash, next_in_strategy]
         candidate.steps << [next_in_strategy]
         candidates << candidate
@@ -192,6 +202,7 @@ add_role assign_role_to_user]
           candidate.users.each do |user|
             relevant_roles(candidate).each do |role|
               next if user.role_symbols.include?(role.to_sym)
+
               approach = candidate.clone_for_step(:assign_role_to_user, role, user)
               # beware of shallow copies!
               cloned_user = user.clone
@@ -222,9 +233,7 @@ add_role assign_role_to_user]
         when :remove_privilege
           relevant_roles(candidate).each do |role|
             approach = candidate.clone_for_step(:remove_privilege, privilege, context, role)
-            if AnalyzerEngine.apply_change(approach.engine, approach.changes.last)
-              new_approaches << approach
-            end
+            new_approaches << approach if AnalyzerEngine.apply_change(approach.engine, approach.changes.last)
           end
         else
           raise "Unknown next strategy step #{next_in_strategy}"
@@ -235,7 +244,9 @@ add_role assign_role_to_user]
             unless viable_approaches.any? { |viable_approach| viable_approach.subset?(new_approach) }
               # puts "New: #{new_approach.changes.inspect}\n  #{viable_approaches.map(&:changes).inspect}"
               viable_approaches.delete_if { |viable_approach| new_approach.subset?(viable_approach) }
-              viable_approaches << new_approach unless viable_approaches.find { |v_a| v_a.state_hash == new_approach.state_hash }
+              viable_approaches << new_approach unless viable_approaches.find do |v_a|
+                                                         v_a.state_hash == new_approach.state_hash
+                                                       end
             end
           else
             candidates << new_approach
@@ -248,8 +259,11 @@ add_role assign_role_to_user]
       def relevant_roles(approach)
         # return AnalyzerEngine.roles(approach.engine)
         (AnalyzerEngine.relevant_roles(approach.engine, approach.users) +
-            (approach.engine.roles.include?(:new_role_for_change_analyzer) ?
-               [AnalyzerEngine::Role.for_sym(:new_role_for_change_analyzer, approach.engine)] : [])).uniq
+            (if approach.engine.roles.include?(:new_role_for_change_analyzer)
+               [AnalyzerEngine::Role.for_sym(:new_role_for_change_analyzer, approach.engine)]
+             else
+               []
+             end)).uniq
       end
     end
   end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 namespace :auth do
   desc 'Lists all privileges used in controllers, views, models'
   task :used_privileges do
@@ -6,9 +8,7 @@ namespace :auth do
     require File.join(Rails.root, 'config', 'environment.rb')
     controllers = [ApplicationController]
     Dir.new("#{Rails.root}/app/controllers").entries.each do |controller_file|
-      if controller_file =~ /_controller/
-        controllers << controller_file.gsub('.rb', '').camelize.constantize
-      end
+      controllers << controller_file.gsub('.rb', '').camelize.constantize if controller_file =~ /_controller/
     end
     perms = controllers.select { |c| c.send(:class_variable_defined?, :@@permissions) }
                        .inject([]) do |all, c|
@@ -25,14 +25,14 @@ namespace :auth do
     end
 
     model_all = `grep -l "Base\.using_access_control" #{Rails.root}/config/*.rb #{Rails.root}/config/initializers/*.rb`.split("\n")
-    if model_all.count > 0
-      model_files = Dir.glob("#{Rails.root}/app/models/*.rb").reject do |item|
-        item.match(/_observer\.rb/)
-      end
-    else
-      model_files = `grep -l "^[[:space:]]*using_access_control" #{Rails.root}/app/models/*.rb`.split("\n")
-    end
-    models_with_ac = model_files.collect { |mf| mf.sub(/^.*\//, '').sub('.rb', '').tableize.to_sym }
+    model_files = if model_all.count.positive?
+                    Dir.glob("#{Rails.root}/app/models/*.rb").reject do |item|
+                      item.match(/_observer\.rb/)
+                    end
+                  else
+                    `grep -l "^[[:space:]]*using_access_control" #{Rails.root}/app/models/*.rb`.split("\n")
+                  end
+    models_with_ac = model_files.collect { |mf| mf.sub(%r{^.*/}, '').sub('.rb', '').tableize.to_sym }
     model_security_privs = %i[create read update delete]
     models_with_ac.each { |m| perms += model_security_privs.collect { |msp| [msp, m] } }
 

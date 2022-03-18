@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 begin
   require File.join(File.dirname(__FILE__), 'lib', 'declarative_authorization') # From here
 rescue LoadError

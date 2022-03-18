@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 # Authorization::AuthorizationInController
-require File.dirname(__FILE__) + '/authorization.rb'
+require "#{File.dirname(__FILE__)}/authorization.rb"
 
 module Authorization
   module AuthorizationInController
@@ -145,13 +147,16 @@ module Authorization
     def load_parent_controller_object(parent_context_without_namespace) # :nodoc:
       instance_var = :"@#{parent_context_without_namespace.to_s.singularize}"
       model = parent_context_without_namespace.to_s.classify.constantize
-      instance_variable_set(instance_var, model.find(params[:"#{parent_context_without_namespace.to_s.singularize}_id"]))
+      instance_variable_set(instance_var,
+                            model.find(params[:"#{parent_context_without_namespace.to_s.singularize}_id"]))
     end
 
     def new_controller_object_from_params(context_without_namespace, parent_context_without_namespace, _strong_params) # :nodoc:
-      model_or_proxy = parent_context_without_namespace ?
-           instance_variable_get(:"@#{parent_context_without_namespace.to_s.singularize}").send(context_without_namespace.to_sym) :
-           context_without_namespace.to_s.classify.constantize
+      model_or_proxy = if parent_context_without_namespace
+                         instance_variable_get(:"@#{parent_context_without_namespace.to_s.singularize}").send(context_without_namespace.to_sym)
+                       else
+                         context_without_namespace.to_s.classify.constantize
+                       end
       instance_var = :"@#{context_without_namespace.to_s.singularize}"
       instance_variable_set(instance_var,
                             model_or_proxy.new(params[context_without_namespace.to_s.singularize]))
@@ -161,9 +166,11 @@ module Authorization
       if model
         model_or_proxy = model.to_s.classify.constantize
       else
-        model_or_proxy = parent_context_without_namespace ?
-        instance_variable_get(:"@#{parent_context_without_namespace.to_s.singularize}").send(context_without_namespace.to_sym) :
-        context_without_namespace.to_s.classify.constantize
+        model_or_proxy = if parent_context_without_namespace
+                           instance_variable_get(:"@#{parent_context_without_namespace.to_s.singularize}").send(context_without_namespace.to_sym)
+                         else
+                           context_without_namespace.to_s.classify.constantize
+                         end
       end
       instance_var = :"@#{context_without_namespace.to_s.singularize}"
       instance_variable_set(instance_var,
@@ -171,9 +178,11 @@ module Authorization
     end
 
     def new_controller_object_for_collection(context_without_namespace, parent_context_without_namespace, _strong_params) # :nodoc:
-      model_or_proxy = parent_context_without_namespace ?
-           instance_variable_get(:"@#{parent_context_without_namespace.to_s.singularize}").send(context_without_namespace.to_sym) :
-           context_without_namespace.to_s.classify.constantize
+      model_or_proxy = if parent_context_without_namespace
+                         instance_variable_get(:"@#{parent_context_without_namespace.to_s.singularize}").send(context_without_namespace.to_sym)
+                       else
+                         context_without_namespace.to_s.classify.constantize
+                       end
       instance_var = :"@#{context_without_namespace.to_s.singularize}"
       instance_variable_set(instance_var, model_or_proxy.new)
     end
@@ -487,9 +496,9 @@ module Authorization
           additional_member: nil,
           collection: [:index],
           additional_collection: nil,
-          #:new_method_for_collection => nil,  # only symbol method name
-          #:new_method => nil,                 # only symbol method name
-          #:load_method => nil,                # only symbol method name
+          # :new_method_for_collection => nil,  # only symbol method name
+          # :new_method => nil,                 # only symbol method name
+          # :load_method => nil,                # only symbol method name
           no_attribute_check: nil,
           context: nil,
           model: nil,
@@ -571,7 +580,8 @@ module Authorization
         filter_access_to :all, attribute_check: true, context: options[:context], model: options[:model]
 
         members.merge(new_actions).merge(collections).each do |action, privilege|
-          next unless (action != privilege) || (options[:no_attribute_check] && options[:no_attribute_check].include?(action))
+          next unless (action != privilege) || options[:no_attribute_check]&.include?(action)
+
           filter_options = {
             strong_parameters: options[:strong_parameters],
             context: options[:context],
@@ -624,6 +634,7 @@ module Authorization
           option.each_with_object({}) do |action, hash|
             if action.is_a?(Array)
               raise "Unexpected option format: #{option.inspect}" if action.length != 2
+
               hash[action.first] = action.last
             else
               hash[action.to_sym] = action.to_sym
@@ -636,6 +647,7 @@ module Authorization
 
   class ControllerPermission # :nodoc:
     attr_reader :actions, :privilege, :context, :attribute_check, :strong_params
+
     def initialize(actions, privilege, context, strong_params, attribute_check = false,
                    load_object_model = nil, load_object_method = nil,
                    filter_block = nil)
@@ -655,6 +667,7 @@ module Authorization
 
     def permit!(contr)
       return contr.instance_eval(&@filter_block) if @filter_block
+
       object = @attribute_check ? load_object(contr) : nil
       privilege = @privilege || :"#{contr.action_name}"
 
@@ -673,20 +686,17 @@ module Authorization
     private
 
     def load_object(contr)
-      if @load_object_method && @load_object_method.is_a?(Symbol)
+      case @load_object_method
+      when Symbol
         contr.send(@load_object_method)
-      elsif @load_object_method && @load_object_method.is_a?(Proc)
+      when Proc
         contr.instance_eval(&@load_object_method)
       else
         load_object_model = @load_object_model ||
                             (@context ? @context.to_s.classify.constantize : contr.class.controller_name.classify.constantize)
         load_object_model = load_object_model.classify.constantize if load_object_model.is_a?(String)
         instance_var = "@#{load_object_model.name.demodulize.underscore}"
-        object = if contr.instance_variable_defined?(instance_var)
-          contr.instance_variable_get(instance_var)
-        else
-          nil
-        end
+        object = (contr.instance_variable_get(instance_var) if contr.instance_variable_defined?(instance_var))
         unless object
           begin
             object = @strong_params ? load_object_model.find_or_initialize_by(id: contr.params[:id]) : load_object_model.find(contr.params[:id])

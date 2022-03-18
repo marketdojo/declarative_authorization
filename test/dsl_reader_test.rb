@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class DSLReaderTest < Test::Unit::TestCase
@@ -165,7 +167,7 @@ class DSLReaderTest < Test::Unit::TestCase
   end
 
   def test_factory_loads_file
-    reader = Authorization::Reader::DSLReader.factory((DA_ROOT + 'authorization_rules.dist.rb').to_s)
+    reader = Authorization::Reader::DSLReader.factory("#{DA_ROOT}authorization_rules.dist.rb".to_s)
     assert_equal(Authorization::Reader::DSLReader, reader.class)
   end
 

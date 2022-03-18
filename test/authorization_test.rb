@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class AuthorizationTest < Test::Unit::TestCase
@@ -798,6 +800,7 @@ class AuthorizationTest < Test::Unit::TestCase
       'Permission'
     end
   end
+
   def test_attribute_with_permissions
     reader = Authorization::Reader::DSLReader.new
     reader.parse %(
@@ -1109,6 +1112,7 @@ class AuthorizationTest < Test::Unit::TestCase
     refute_equal engine.auth_rules.first.contexts.object_id,
                  cloned_engine.auth_rules.first.contexts.object_id
     refute_equal engine.auth_rules.first.attributes.first.send(:instance_variable_get, :@conditions_hash)[:attr].object_id,
-                 cloned_engine.auth_rules.first.attributes.first.send(:instance_variable_get, :@conditions_hash)[:attr].object_id
+                 cloned_engine.auth_rules.first.attributes.first.send(:instance_variable_get,
+                                                                      :@conditions_hash)[:attr].object_id
   end
 end

@@ -1,8 +1,12 @@
+# frozen_string_literal: true
+
 if Authorization.activate_authorization_rules_browser?
 
   require File.join(File.dirname(__FILE__), %w[.. .. lib declarative_authorization development_support analyzer])
-  require File.join(File.dirname(__FILE__), %w[.. .. lib declarative_authorization development_support change_supporter])
-  require File.join(File.dirname(__FILE__), %w[.. .. lib declarative_authorization development_support development_support])
+  require File.join(File.dirname(__FILE__),
+                    %w[.. .. lib declarative_authorization development_support change_supporter])
+  require File.join(File.dirname(__FILE__),
+                    %w[.. .. lib declarative_authorization development_support development_support])
 
   begin
     # for nice auth_rules output:
@@ -38,16 +42,16 @@ if Authorization.activate_authorization_rules_browser?
       end.flatten.uniq
       @privileges.sort_by(&:to_s)
       @privilege = begin
-                     params[:privilege].to_sym
-                   rescue StandardError
-                     @privileges.first
-                   end
+        params[:privilege].to_sym
+      rescue StandardError
+        @privileges.first
+      end
       @contexts = authorization_engine.auth_rules.collect { |rule| rule.contexts.to_a }.flatten.uniq
       @context = begin
-                   params[:context].to_sym
-                 rescue StandardError
-                   @contexts.first
-                 end
+        params[:context].to_sym
+      rescue StandardError
+        @contexts.first
+      end
 
       respond_to do |format|
         format.html
@@ -60,6 +64,7 @@ if Authorization.activate_authorization_rules_browser?
     def suggest_change
       users_permission = params[:user].each_with_object({}) do |(user_id, data), memo|
         next unless data[:permission] != 'undetermined'
+
         begin
           memo[find_user_by_id(user_id)] = (data[:permission] == 'yes')
         rescue ActiveRecord::NotFound
@@ -164,7 +169,9 @@ if Authorization.activate_authorization_rules_browser?
           @context_privs[context] ||= []
           @context_privs[context] += auth_rule.privileges.to_a
           @context_privs[context].uniq!
-          @role_privs[auth_rule.role] += auth_rule.privileges.collect { |p| [context, p, auth_rule.attributes.empty?, auth_rule.to_long_s] }
+          @role_privs[auth_rule.role] += auth_rule.privileges.collect do |p|
+            [context, p, auth_rule.attributes.empty?, auth_rule.to_long_s]
+          end
         end
       end
 
@@ -222,7 +229,7 @@ if Authorization.activate_authorization_rules_browser?
       gv.close_write
       gv.read
     rescue IOError, Errno::EPIPE => e
-      raise Exception, "Error in call to graphviz: #{e}"
+      raise StandardError, "Error in call to graphviz: #{e}"
     end
 
     def graph_options
@@ -231,20 +238,22 @@ if Authorization.activate_authorization_rules_browser?
         privilege_hierarchy: !params[:privilege_hierarchy].blank?,
         stacked_roles: !params[:stacked_roles].blank?,
         only_relevant_roles: !params[:only_relevant_roles].blank?,
-        filter_roles: params[:filter_roles].blank? ? nil : (params[:filter_roles].is_a?(Array) ? params[:filter_roles].map(&:to_sym) : [params[:filter_roles].to_sym]),
+        filter_roles: if params[:filter_roles].blank?
+                        nil
+                      else
+                        (params[:filter_roles].is_a?(Array) ? params[:filter_roles].map(&:to_sym) : [params[:filter_roles].to_sym])
+                      end,
         filter_contexts: params[:filter_contexts].blank? ? nil : params[:filter_contexts].to_sym,
         highlight_privilege: params[:highlight_privilege].blank? ? nil : params[:highlight_privilege].to_sym,
         changes: deserialize_changes(params[:changes]),
-        users: params[:user_ids] && params[:user_ids].collect { |user_id| find_user_by_id(user_id) }
+        users: params[:user_ids]&.collect { |user_id| find_user_by_id(user_id) }
       }
     end
 
     def deserialize_changes(changes)
-      if changes
-        changes.split(';').collect do |info|
-          info.split(',').collect do |info_part|
-            info_part[0, 1] == ':' ? info_part[1..-1].to_sym : info_part
-          end
+      changes&.split(';')&.collect do |info|
+        info.split(',').collect do |info_part|
+          info_part[0, 1] == ':' ? info_part[1..-1].to_sym : info_part
         end
       end
     end
@@ -260,4 +269,4 @@ if Authorization.activate_authorization_rules_browser?
 
 else
   class AuthorizationRulesController < ApplicationController; end
-end # activate_authorization_rules_browser?
+end

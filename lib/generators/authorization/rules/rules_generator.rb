@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'rails/generators'
 module Authorization
   class RulesGenerator < Rails::Generators::Base
-    source_root File.expand_path('../templates', __FILE__)
+    source_root File.expand_path('templates', __dir__)
 
     def copy_auth_rules
       puts 'WARNING - Copying authorization_rules template.  Make sure to back up any existing rules before overwriting.'
