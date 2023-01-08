@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 module Authorization
   module DevelopmentSupport
@@ -50,7 +51,11 @@ module Authorization
           privilege, context, role = change[1, 3]
           role = Role.for_sym(role.to_sym, engine)
           privilege = Privilege.for_sym(privilege.to_sym, engine)
-          if ([privilege] + privilege.ancestors).any? { |ancestor_privilege| ([role] + role.ancestors).any? { |ancestor_role| !ancestor_role.rules_for_permission(ancestor_privilege, context).empty? } }
+          if ([privilege] + privilege.ancestors).any? do |ancestor_privilege|
+               ([role] + role.ancestors).any? do |ancestor_role|
+                 !ancestor_role.rules_for_permission(ancestor_privilege, context).empty?
+               end
+             end
             false
           else
             engine.auth_rules << AuthorizationRule.new(role.to_sym,
@@ -77,6 +82,7 @@ module Authorization
       class Role
         @@role_objects = {}
         attr_reader :role
+
         def initialize(role, rules, engine)
           @role = role
           @rules = rules
@@ -139,7 +145,11 @@ module Authorization
         def self.all_for_privilege(privilege, context, engine)
           privilege = privilege.is_a?(Symbol) ? Privilege.for_sym(privilege, engine) : privilege
           privilege_symbols = ([privilege] + privilege.ancestors).map(&:to_sym)
-          all(engine).select { |role| role.rules.any? { |rule| rule.matches?([role.to_sym], privilege_symbols, context) } }
+          all(engine).select do |role|
+            role.rules.any? do |rule|
+              rule.matches?([role.to_sym], privilege_symbols, context)
+            end
+          end
                      .collect { |role| [role] + role.descendants }.flatten.uniq
         end
       end
@@ -148,13 +158,16 @@ module Authorization
         @@rule_objects = {}
         delegate :source_line, :source_file, :contexts, :matches?, to: :@rule
         attr_reader :rule
+
         def initialize(rule, engine)
           @rule = rule
           @engine = engine
         end
 
         def privileges
-          PrivilegesSet.new(self, @engine, @rule.privileges.collect { |privilege| Privilege.for_sym(privilege, @engine) })
+          PrivilegesSet.new(self, @engine, @rule.privileges.collect do |privilege|
+                                             Privilege.for_sym(privilege, @engine)
+                                           end)
         end
 
         def self.for_rule(rule, engine)

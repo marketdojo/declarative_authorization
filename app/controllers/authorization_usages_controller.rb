@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 if Authorization.activate_authorization_rules_browser?
 
   require File.join(File.dirname(__FILE__), %w[.. .. lib declarative_authorization maintenance])
@@ -18,4 +20,4 @@ if Authorization.activate_authorization_rules_browser?
 
 else
   class AuthorizationUsagesController < ApplicationController; end
-end # activate_authorization_rules_browser?
+end

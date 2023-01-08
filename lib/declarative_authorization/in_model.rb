@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 # Authorization::AuthorizationInModel
-require File.dirname(__FILE__) + '/authorization.rb'
-require File.dirname(__FILE__) + '/obligation_scope.rb'
+require "#{File.dirname(__FILE__)}/authorization.rb"
+require "#{File.dirname(__FILE__)}/obligation_scope.rb"
 
 module Authorization
   module AuthorizationInModel

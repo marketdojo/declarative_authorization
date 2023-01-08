@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require File.join(File.dirname(__FILE__), %w[development_support])
 
 begin
@@ -104,7 +106,7 @@ module Authorization
         SMALL_ROLES_RATIO = 0.2
 
         def analyze_policy
-          (small_roles.length > 1) && (small_roles.length.to_f / roles.length.to_f > SMALL_ROLES_RATIO)
+          (small_roles.length > 1) && (small_roles.length.to_f / roles.length > SMALL_ROLES_RATIO)
         end
 
         def message(_object)
@@ -192,6 +194,7 @@ module Authorization
 
             permissions_by_context_and_rules.each do |_key, rules|
               next unless rules.length > 1
+
               rule_lines = rules.collect { |rule| rule[:line] }
               rules.each do |rule|
                 @analyzer.reports << Report.new(:mergeable_rules, '', rule[:line],
@@ -253,6 +256,7 @@ module Authorization
 
       class Report
         attr_reader :type, :filename, :line, :message
+
         def initialize(type, filename, line, msg)
           @type = type
           @filename = filename

@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 # Authorization
-require File.dirname(__FILE__) + '/reader.rb'
+require "#{File.dirname(__FILE__)}/reader.rb"
 require 'set'
 require 'forwardable'
 
@@ -20,7 +22,10 @@ module Authorization
   # The exception is raised to ensure that the entire rule is invalidated.
   class NilAttributeValueError < AuthorizationError; end
 
-  AUTH_DSL_FILES = [Pathname.new(Rails.root || '').join('config', 'authorization_rules.rb').to_s].freeze unless defined? AUTH_DSL_FILES
+  unless defined? AUTH_DSL_FILES
+    AUTH_DSL_FILES = [Pathname.new(Rails.root || '').join('config',
+                                                          'authorization_rules.rb').to_s].freeze
+  end
 
   # Controller-independent method for retrieving the current user.
   # Needed for model security where the current controller is not available.
@@ -74,7 +79,8 @@ module Authorization
     attr_reader :reader
 
     def_delegators :@reader, :auth_rules_reader, :privileges_reader, :load, :load!
-    def_delegators :auth_rules_reader, :auth_rules, :roles, :omnipotent_roles, :role_hierarchy, :role_titles, :role_descriptions
+    def_delegators :auth_rules_reader, :auth_rules, :roles, :omnipotent_roles, :role_hierarchy, :role_titles,
+                   :role_descriptions
     def_delegators :privileges_reader, :privileges, :privilege_hierarchy
 
     # If +reader+ is not given, a new one is created with the default
@@ -142,6 +148,7 @@ module Authorization
     #
     def permit!(privilege, options = {})
       return true if Authorization.ignore_access_control
+
       options = {
         object: nil,
         skip_attribute_test: false,
@@ -150,9 +157,11 @@ module Authorization
       }.merge(options)
 
       # Make sure we're handling all privileges as symbols.
-      privilege = privilege.is_a?(Array) ?
-                  privilege.flatten.collect(&:to_sym) :
-                  privilege.to_sym
+      privilege = if privilege.is_a?(Array)
+                    privilege.flatten.collect(&:to_sym)
+                  else
+                    privilege.to_sym
+                  end
 
       #
       # If the object responds to :proxy_reflection, we're probably working with
@@ -167,10 +176,12 @@ module Authorization
 
       begin
         options[:context] ||= options[:object] && (
-                options[:object].class.respond_to?(:decl_auth_context) ?
-                    options[:object].class.decl_auth_context :
-                    options[:object].class.name.tableize.to_sym
-        )
+                if options[:object].class.respond_to?(:decl_auth_context)
+                  options[:object].class.decl_auth_context
+                else
+                  options[:object].class.name.tableize.to_sym
+                end
+              )
       rescue StandardError
         NoMethodError
       end
@@ -195,7 +206,8 @@ module Authorization
                                "(roles #{roles.inspect}, privileges #{privileges.inspect}, " \
                                "context #{options[:context].inspect})."
         else
-          raise AttributeAuthorizationError, "#{privilege} not allowed for User with id #{user.try(:id)} on #{(options[:object] || options[:context]).inspect}."
+          raise AttributeAuthorizationError,
+                "#{privilege} not allowed for User with id #{user.try(:id)} on #{(options[:object] || options[:context]).inspect}."
         end
       else
         false
@@ -286,16 +298,14 @@ module Authorization
     def self.development_reload?
       if Rails.env.development?
         mod_time = AUTH_DSL_FILES.map do |m|
-          begin
-            File.mtime(m)
-          rescue StandardError
-            Time.at(0)
-          end
+          File.mtime(m)
+        rescue StandardError
+          Time.at(0)
         end.flatten.max
         @@auth_dsl_last_modified ||= mod_time
         if mod_time > @@auth_dsl_last_modified
           @@auth_dsl_last_modified = mod_time
-          return true
+          true
         end
       end
     end
@@ -313,6 +323,7 @@ module Authorization
 
     class AttributeValidator # :nodoc:
       attr_reader :user, :object, :engine, :context, :privilege
+
       def initialize(engine, user, object = nil, privilege = nil, context = nil)
         @engine = engine
         @user = user
@@ -361,10 +372,14 @@ module Authorization
     def flatten_privileges(privileges, context = nil, flattened_privileges = Set.new)
       # TODO: caching?
       raise AuthorizationUsageError, 'No context given or inferable from object' unless context
+
       privileges.reject { |priv| flattened_privileges.include?(priv) }.each do |priv|
         flattened_privileges << priv
-        flatten_privileges(rev_priv_hierarchy[[priv, nil]], context, flattened_privileges) if rev_priv_hierarchy[[priv, nil]]
-        flatten_privileges(rev_priv_hierarchy[[priv, context]], context, flattened_privileges) if rev_priv_hierarchy[[priv, context]]
+        flatten_privileges(rev_priv_hierarchy[[priv, nil]], context, flattened_privileges) if rev_priv_hierarchy[[priv,
+                                                                                                                  nil]]
+        flatten_privileges(rev_priv_hierarchy[[priv, context]], context, flattened_privileges) if rev_priv_hierarchy[[
+          priv, context
+        ]]
       end
       flattened_privileges.to_a
     end
@@ -419,6 +434,7 @@ module Authorization
 
     def cached_auth_rules
       return @cached_auth_rules if @cached_auth_rules
+
       @cached_auth_rules = {}
       @rules.each do |rule|
         rule.contexts.each do |context|
@@ -468,23 +484,19 @@ module Authorization
     def validate?(attr_validator, skip_attribute = false)
       skip_attribute || @attributes.empty? ||
         @attributes.send(@join_operator == :and ? :all? : :any?) do |attr|
-          begin
-            attr.validate?(attr_validator)
-          rescue NilAttributeValueError
-            nil # Bumping up against a nil attribute value flunks the rule.
-          end
+          attr.validate?(attr_validator)
+        rescue NilAttributeValueError
+          nil # Bumping up against a nil attribute value flunks the rule.
         end
     end
 
     def obligations(attr_validator)
       exceptions = []
       obligations = @attributes.collect do |attr|
-        begin
-          attr.obligation(attr_validator)
-        rescue NotAuthorized => e
-          exceptions << e
-          nil
-        end
+        attr.obligation(attr_validator)
+      rescue NotAuthorized => e
+        exceptions << e
+        nil
       end
 
       if !exceptions.empty? && ((@join_operator == :and) || (exceptions.length == @attributes.length))
@@ -534,6 +546,7 @@ module Authorization
       if Authorization.is_a_association_proxy?(object) &&
          object.respond_to?(:empty?)
         return false if object.empty?
+
         object.each do |member|
           return true if validate?(attr_validator, member, hash)
         end
@@ -660,15 +673,15 @@ module Authorization
     end
 
     def deep_hash_clone(hash)
-      hash.each_with_object({}) do |(key, val), memo|
-        memo[key] = case val
-                    when Hash
-                      deep_hash_clone(val)
-                    when NilClass, Symbol
-                      val
-                    else
-                      val.clone
-                    end
+      hash.transform_values do |val|
+        case val
+        when Hash
+          deep_hash_clone(val)
+        when NilClass, Symbol
+          val
+        else
+          val.clone
+        end
       end
     end
   end
@@ -785,20 +798,23 @@ module Authorization
       "if_permitted_to #{@privilege.inspect}, #{@attr_hash.inspect}"
     end
 
-    private
-
     def self.reflection_for_path(parent_model, path)
-      reflection = path.empty? ? parent_model : begin
-        parent = reflection_for_path(parent_model, path[0..-2])
-        if !parent.respond_to?(:proxy_reflection) && parent.respond_to?(:klass)
-          parent.klass.reflect_on_association(path.last)
-        else
-          parent.reflect_on_association(path.last)
-        end
-      rescue StandardError
-        parent.reflect_on_association(path.last)
-      end
+      reflection = if path.empty?
+                     parent_model
+                   else
+                     begin
+                       parent = reflection_for_path(parent_model, path[0..-2])
+                       if !parent.respond_to?(:proxy_reflection) && parent.respond_to?(:klass)
+                         parent.klass.reflect_on_association(path.last)
+                       else
+                         parent.reflect_on_association(path.last)
+                       end
+                     rescue StandardError
+                       parent.reflect_on_association(path.last)
+                     end
+                   end
       raise "invalid path #{path.inspect}" if reflection.nil?
+
       reflection
     end
   end
@@ -806,6 +822,7 @@ module Authorization
   # Represents a pseudo-user to facilitate anonymous users in applications
   class AnonymousUser
     attr_reader :role_symbols
+
     def initialize(roles = [Authorization.default_role])
       @role_symbols = roles
     end

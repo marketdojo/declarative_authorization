@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Authorization::Reader
 module Authorization
   # Parses an authorization configuration file in the authorization DSL and
@@ -94,7 +96,11 @@ module Authorization
       # Load and parse a DSL from the given file name. Raises Authorization::Reader::DSLFileNotFoundError
       # if the file cannot be found.
       def load!(dsl_file)
-        raise ::Authorization::Reader::DSLFileNotFoundError, "Error reading authorization rules file with path '#{dsl_file}'!  Please ensure it exists and that it is accessible." unless File.exist?(dsl_file)
+        unless File.exist?(dsl_file)
+          raise ::Authorization::Reader::DSLFileNotFoundError,
+                "Error reading authorization rules file with path '#{dsl_file}'!  Please ensure it exists and that it is accessible."
+        end
+
         load(dsl_file)
       end
 
@@ -176,6 +182,7 @@ module Authorization
       # be used inside a privilege block.
       def includes(*privileges)
         raise DSLError, 'includes only in privilege block' if @current_priv.nil?
+
         privileges.each do |priv|
           append_privilege priv
           @privilege_hierarchy[@current_priv] ||= []
@@ -239,6 +246,7 @@ module Authorization
       #
       def includes(*roles)
         raise DSLError, 'includes only in role blocks' if @current_role.nil?
+
         @role_hierarchy[@current_role] ||= []
         @role_hierarchy[@current_role] += roles.flatten
       end
@@ -276,6 +284,7 @@ module Authorization
         context = args.flatten
 
         raise DSLError, 'has_permission_on only allowed in role blocks' if @current_role.nil?
+
         options = { to: [], join_by: :or }.merge(options)
 
         privs = options[:to]
@@ -290,6 +299,7 @@ module Authorization
           @current_rule = rule
           yield
           raise DSLError, 'has_permission_on block content specifies no privileges' if rule.privileges.empty?
+
           # TODO: ensure?
           @current_rule = nil
         end
@@ -301,6 +311,7 @@ module Authorization
       #   end
       def has_omnipotence
         raise DSLError, 'has_omnipotence only allowed in role blocks' if @current_role.nil?
+
         @omnipotent_roles << @current_role
       end
 
@@ -311,6 +322,7 @@ module Authorization
       #   end
       def description(text)
         raise DSLError, 'description only allowed in role blocks' if @current_role.nil?
+
         role_descriptions[@current_role] = text
       end
 
@@ -321,6 +333,7 @@ module Authorization
       #   end
       def title(text)
         raise DSLError, 'title only allowed in role blocks' if @current_role.nil?
+
         role_titles[@current_role] = text
       end
 
@@ -334,6 +347,7 @@ module Authorization
       #   end
       def to(*privs)
         raise DSLError, 'to only allowed in has_permission_on blocks' if @current_rule.nil?
+
         @current_rule.append_privileges(privs.flatten)
       end
 
@@ -393,6 +407,7 @@ module Authorization
       #
       def if_attribute(attr_conditions_hash)
         raise DSLError, 'if_attribute only in has_permission blocks' if @current_rule.nil?
+
         parse_attribute_conditions_hash!(attr_conditions_hash)
         @current_rule.append_attribute Attribute.new(attr_conditions_hash)
       end
@@ -445,6 +460,7 @@ module Authorization
       #
       def if_permitted_to(privilege, attr_or_hash = nil, options = {})
         raise DSLError, 'if_permitted_to only in has_permission blocks' if @current_rule.nil?
+
         options[:context] ||= attr_or_hash.delete(:context) if attr_or_hash.is_a?(Hash)
         # only :context option in attr_or_hash:
         attr_or_hash = nil if attr_or_hash.is_a?(Hash) && attr_or_hash.empty?
@@ -536,7 +552,7 @@ module Authorization
       def file_and_line_number_from_call_stack
         caller_parts = caller(2).first.split(':')
         [caller_parts[0] == '(eval)' ? nil : caller_parts[0],
-         caller_parts[1] && caller_parts[1].to_i]
+         caller_parts[1]&.to_i]
       end
     end
   end

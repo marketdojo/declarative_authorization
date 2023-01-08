@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 ENV['RAILS_ENV'] = 'test'
 
 require 'pathname'
@@ -24,6 +26,7 @@ class MockDataObject
     attrs.each do |key, value|
       instance_variable_set(:"@#{key}", value)
       next if respond_to?(:"#{key}")
+
       self.class.class_eval do
         attr_reader key unless method_defined?(key)
       end
@@ -44,17 +47,23 @@ class MockDataObject
 
   def self.find(*args)
     raise StandardError, "Couldn't find #{name} with id #{args[0].inspect}" unless args[0]
+
     new id: args[0]
   end
 
   def self.find_or_initialize_by(args)
-    raise StandardError, 'Syntax error: find_or_initialize by expects a hash: User.find_or_initialize_by(:id => @user.id)' unless args.is_a?(Hash)
+    unless args.is_a?(Hash)
+      raise StandardError,
+            'Syntax error: find_or_initialize by expects a hash: User.find_or_initialize_by(:id => @user.id)'
+    end
+
     new id: args[:id]
   end
 end
 
 class MockUser < MockDataObject
   attr_accessor :id
+
   def initialize(*roles)
     options = roles.last.is_a?(::Hash) ? roles.pop : {}
     super({ role_symbols: roles, login: hash }.merge(options))
@@ -105,11 +114,12 @@ class TestApp
     config.eager_load = false
     config.secret_key_base = 'testingpurposesonly'
     config.active_support.deprecation = :stderr
-    database_path = File.expand_path('../database.yml', __FILE__)
+    database_path = File.expand_path('database.yml', __dir__)
     config.paths['config/database'] = database_path
     initialize!
   end
 end
+
 class ApplicationController < ActionController::Base
 end
 
@@ -124,33 +134,39 @@ class TestApp
   end
 end
 
-ActionController::Base.send :include, Authorization::AuthorizationInController
+ActionController::Base.include Authorization::AuthorizationInController
 
 module Test
   module Unit
   end
 end
 
-class Test::Unit::TestCase < Minitest::Test
-  include Authorization::TestHelper
+module Test
+  module Unit
+    class TestCase < Minitest::Test
+      include Authorization::TestHelper
+    end
+  end
 end
 
-class ActiveSupport::TestCase
-  include Authorization::TestHelper
+module ActiveSupport
+  class TestCase
+    include Authorization::TestHelper
 
-  def request!(user, action, reader, params = {})
-    action = action.to_sym if action.is_a?(String)
-    @controller.current_user = user
-    @controller.authorization_engine = Authorization::Engine.new(reader)
+    def request!(user, action, reader, params = {})
+      action = action.to_sym if action.is_a?(String)
+      @controller.current_user = user
+      @controller.authorization_engine = Authorization::Engine.new(reader)
 
-    ((params.delete(:clear) || []) + [:@authorized]).each do |var|
-      @controller.instance_variable_set(var, nil)
+      ((params.delete(:clear) || []) + [:@authorized]).each do |var|
+        @controller.instance_variable_set(var, nil)
+      end
+      get action, params: params
     end
-    get action, params: params
-  end
 
-  def setup
-    # @routes = Rails::Application.routes
-    @routes = Rails.application.routes
+    def setup
+      # @routes = Rails::Application.routes
+      @routes = Rails.application.routes
+    end
   end
 end

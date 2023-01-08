@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 # Authorization::AuthorizationHelper
-require File.dirname(__FILE__) + '/authorization.rb'
+require "#{File.dirname(__FILE__)}/authorization.rb"
 
 module Authorization
   module AuthorizationHelper

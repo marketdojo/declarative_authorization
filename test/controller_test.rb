@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class LoadMockObject < MockDataObject
@@ -8,13 +10,15 @@ end
 
 ##################
 
-class ActionController::Base
-  class << self
-    def before_actions
-      filters = _process_action_callbacks.select { |c| c.kind == :before }
-      filters.map!(&:raw_filter)
+module ActionController
+  class Base
+    class << self
+      def before_actions
+        filters = _process_action_callbacks.select { |c| c.kind == :before }
+        filters.map!(&:filter)
+      end
+      alias before_actions before_actions
     end
-    alias before_actions before_actions
   end
 end
 
@@ -184,6 +188,7 @@ class AllMocksController < MocksController
   filter_access_to :view, require: :test, context: :permissions
   define_action_methods :show, :view
 end
+
 class AllActionsControllerTest < ActionController::TestCase
   tests AllMocksController
   def test_filter_access_all
@@ -234,6 +239,7 @@ class LoadMockObjectsController < MocksController
     @@load_method_call_count || 0
   end
 end
+
 class LoadObjectControllerTest < ActionController::TestCase
   tests LoadMockObjectsController
 
@@ -347,6 +353,7 @@ class AccessOverwritesController < MocksController
   filter_access_to :test_action, require: :test, context: :permissions
   define_action_methods :test_action, :test_action_2
 end
+
 class AccessOverwritesControllerTest < ActionController::TestCase
   def test_filter_access_overwrite
     reader = Authorization::Reader::DSLReader.new
@@ -370,6 +377,7 @@ class PeopleController < MocksController
   filter_access_to :all
   define_action_methods :show
 end
+
 class PluralizationControllerTest < ActionController::TestCase
   tests PeopleController
 
@@ -392,13 +400,16 @@ class CommonController < MocksController
   filter_access_to :delete, context: :common
   filter_access_to :all
 end
+
 class CommonChild1Controller < CommonController
   filter_access_to :all, context: :context_1
 end
+
 class CommonChild2Controller < CommonController
   filter_access_to :delete
   define_action_methods :show, :delete
 end
+
 class HierachicalControllerTest < ActionController::TestCase
   tests CommonChild2Controller
   def test_controller_hierarchy
@@ -425,6 +436,7 @@ module Name
     define_action_methods :show, :update
   end
 end
+
 class NameSpacedControllerTest < ActionController::TestCase
   tests Name::SpacedThingsController
   def test_context
@@ -461,6 +473,7 @@ module Deep
     end
   end
 end
+
 class DeepNameSpacedControllerTest < ActionController::TestCase
   tests Deep::NameSpaced::ThingsController
   def test_context

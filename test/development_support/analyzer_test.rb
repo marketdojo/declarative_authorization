@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 auth_analyzer_loadable = false
@@ -233,8 +235,12 @@ if auth_analyzer_loadable
       )
       engine = Authorization::Engine.new(reader)
 
-      assert_equal 1, Authorization::DevelopmentSupport::AnalyzerEngine::Role.all_for_privilege(:read, :test, engine).length
-      assert_equal 2, Authorization::DevelopmentSupport::AnalyzerEngine::Role.all_for_privilege(:read, :test_2, engine).length
+      assert_equal 1,
+                   Authorization::DevelopmentSupport::AnalyzerEngine::Role.all_for_privilege(:read, :test,
+                                                                                             engine).length
+      assert_equal 2,
+                   Authorization::DevelopmentSupport::AnalyzerEngine::Role.all_for_privilege(:read, :test_2,
+                                                                                             engine).length
     end
 
     def test_analyze_for_proposed_privilege_hierarchy
@@ -270,4 +276,4 @@ if auth_analyzer_loadable
     end
   end
 
-end # Authorization::Analyzer was loaded
+end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Authorization
   # The +ObligationScope+ class parses any number of obligations into joins and conditions.
   #
@@ -82,10 +84,10 @@ module Authorization
         steps.each do |step, next_steps|
           path_to_this_point = [past_steps, step].flatten
           reflection = begin
-                         reflection_for(path_to_this_point)
-                       rescue StandardError
-                         nil
-                       end
+            reflection_for(path_to_this_point)
+          rescue StandardError
+            nil
+          end
           if reflection
             follow_path(next_steps, path_to_this_point)
           else
@@ -161,16 +163,20 @@ module Authorization
     def map_reflection_for(path)
       raise "reflection for #{path.inspect} already exists" unless reflections[path].nil?
 
-      reflection = path.empty? ? top_level_model : begin
-        parent = reflection_for(path[0..-2])
-        if !Authorization.is_a_association_proxy?(parent) && parent.respond_to?(:klass)
-          parent.klass.reflect_on_association(path.last)
-        else
-          parent.reflect_on_association(path.last)
-        end
-      rescue StandardError
-        parent.reflect_on_association(path.last)
-      end
+      reflection = if path.empty?
+                     top_level_model
+                   else
+                     begin
+                       parent = reflection_for(path[0..-2])
+                       if !Authorization.is_a_association_proxy?(parent) && parent.respond_to?(:klass)
+                         parent.klass.reflect_on_association(path.last)
+                       else
+                         parent.reflect_on_association(path.last)
+                       end
+                     rescue StandardError
+                       parent.reflect_on_association(path.last)
+                     end
+                   end
       raise "invalid path #{path.inspect}" if reflection.nil?
 
       reflections[path] = reflection
@@ -306,7 +312,7 @@ module Authorization
         first_ref = refs
         if polymorphic?(first_ref)
           # sanity check
-          raise 'Only one polymorphic relation is allowed at each step' if refs.class == 'Array' && refs.length > 1
+          raise 'Only one polymorphic relation is allowed at each step' if refs.instance_of?('Array') && refs.length > 1
 
           polymorphic_paths[path] = first_ref.active_record.poly_resource_names
         end
@@ -318,9 +324,7 @@ module Authorization
         end
 
         if existing_join
-          if join_to_path(existing_join).length < path.length
-            joins[joins.index(existing_join)] = path_to_join(path)
-          end
+          joins[joins.index(existing_join)] = path_to_join(path) if join_to_path(existing_join).length < path.length
         else
           joins << path_to_join(path)
         end
@@ -350,7 +354,7 @@ module Authorization
       end
 
       conds_len = obligation_conditions.length
-      if conds_len == 0
+      if conds_len.zero?
         # No obligation conditions means we don't have to mess with joins or includes at all.
       elsif conds_len == 1 && polymorphic_paths.empty?
         # joins in a scope are converted to inner joins

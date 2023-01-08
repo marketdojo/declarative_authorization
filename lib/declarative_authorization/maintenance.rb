@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 # Authorization::Maintenance
-require File.dirname(__FILE__) + '/authorization.rb'
+require "#{File.dirname(__FILE__)}/authorization.rb"
 
 module Authorization
   # Provides a few maintenance methods for modifying data without enforcing
@@ -55,7 +57,7 @@ module Authorization
       def self.usages_by_controller
         # load each application controller
         begin
-          Dir.glob(File.join(::Rails.root, 'app', 'controllers', '**', '*_controller\.rb')) do |entry|
+          Dir.glob(File.join(::Rails.root, 'app', 'controllers', '**', '*_controller\.rb')).sort.each do |entry|
             require entry
           end
         rescue Errno::ENOENT
@@ -157,7 +159,7 @@ module Authorization
     #   should_be_allowed_to :create, :object => car, :context => :vehicles, :user => a_normal_user
     def should_be_allowed_to(privilege, *args)
       options = {}
-      if args.first.class == Hash
+      if args.first.instance_of?(Hash)
         options = args.extract_options!
       else
         options[args[0].is_a?(Symbol) ? :context : :object] = args[0]
@@ -168,7 +170,7 @@ module Authorization
     # See should_be_allowed_to
     def should_not_be_allowed_to(privilege, *args)
       options = {}
-      if args.first.class == Hash
+      if args.first.instance_of?(Hash)
         options = args.extract_options!
       else
         options[args[0].is_a?(Symbol) ? :context : :object] = args[0]
@@ -178,7 +180,7 @@ module Authorization
 
     def request_with(user, method, xhr, action, params = {},
                      session = {}, flash = {})
-      session = session.merge(user: user, user_id: user && user.id)
+      session = session.merge(user: user, user_id: user&.id)
       with_user(user) do
         if xhr
           xhr method, action, params: params, session: session, flash: flash
@@ -190,7 +192,7 @@ module Authorization
 
     def self.included(base)
       %i[get post put delete].each do |method|
-        base.class_eval <<-EOV, __FILE__, __LINE__
+        base.class_eval <<-EOV, __FILE__, __LINE__ + 1
           def #{method}_with(user, *args)
             request_with(user, #{method.inspect}, false, *args)
           end

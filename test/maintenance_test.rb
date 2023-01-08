@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 require File.join(File.dirname(__FILE__), %w[.. lib declarative_authorization maintenance])
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class BasicResource < MockDataObject
@@ -5,10 +7,12 @@ class BasicResource < MockDataObject
     'BasicResource'
   end
 end
+
 class BasicResourcesController < MocksController
   filter_resource_access strong_parameters: false
   define_resource_actions
 end
+
 class BasicResourcesControllerTest < ActionController::TestCase
   def test_basic_filter_index
     reader = Authorization::Reader::DSLReader.new
@@ -71,9 +75,7 @@ end
 
 class NestedResource < MockDataObject
   def initialize(attributes = {})
-    if attributes[:id]
-      attributes[:parent_mock] ||= ParentMock.new(id: attributes[:id])
-    end
+    attributes[:parent_mock] ||= ParentMock.new(id: attributes[:id]) if attributes[:id]
     super(attributes)
   end
 
@@ -84,9 +86,7 @@ end
 
 class ShallowNestedResource < MockDataObject
   def initialize(attributes = {})
-    if attributes[:id]
-      attributes[:parent_mock] ||= ParentMock.new(id: attributes[:id])
-    end
+    attributes[:parent_mock] ||= ParentMock.new(id: attributes[:id]) if attributes[:id]
     super(attributes)
   end
 
@@ -123,6 +123,7 @@ class NestedResourcesController < MocksController
   filter_resource_access nested_in: :parent_mocks, strong_parameters: false
   define_resource_actions
 end
+
 class NestedResourcesControllerTest < ActionController::TestCase
   def test_nested_filter_index
     reader = Authorization::Reader::DSLReader.new
@@ -198,6 +199,7 @@ class ShallowNestedResourcesController < MocksController
   define_resource_actions
   define_action_methods :additional_member_action
 end
+
 class ShallowNestedResourcesControllerTest < ActionController::TestCase
   def test_nested_filter_index
     reader = Authorization::Reader::DSLReader.new
@@ -300,6 +302,7 @@ class CustomMembersCollectionsResourceController < MocksController
                          collection: { search: :read }, new: [:other_new], strong_parameters: false
   define_action_methods :other_new, :search, :other_show
 end
+
 class CustomMembersCollectionsResourceControllerTest < ActionController::TestCase
   def test_custom_members_filter_search
     reader = Authorization::Reader::DSLReader.new
@@ -368,6 +371,7 @@ class AdditionalMembersCollectionsResourceController < MocksController
   define_resource_actions
   define_action_methods :other_new, :search, :other_show
 end
+
 class AdditionalMembersCollectionsResourceControllerTest < ActionController::TestCase
   def test_additional_members_filter_search_index
     reader = Authorization::Reader::DSLReader.new
@@ -450,6 +454,7 @@ class ExplicitContextResourceController < MocksController
   filter_resource_access context: :basic_resources, strong_parameters: false
   define_resource_actions
 end
+
 class ExplicitContextResourceControllerTest < ActionController::TestCase
   def test_explicit_context_filter_index
     reader = Authorization::Reader::DSLReader.new
@@ -529,6 +534,7 @@ class StrongResourcesController < MocksController
     params.require(:strong_resource).permit(:test_param1, :test_param2)
   end
 end
+
 class StrongResourcesControllerTest < ActionController::TestCase
   def test_still_authorized_with_strong_params
     reader = Authorization::Reader::DSLReader.new

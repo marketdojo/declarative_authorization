@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 require File.join(File.dirname(__FILE__), %w[.. lib declarative_authorization helper])
 
@@ -5,6 +7,7 @@ class HelperMocksController < MocksController
   filter_access_to :action, require: :show, context: :mocks
   define_action_methods :action
 end
+
 class HelperTest < ActionController::TestCase
   tests HelperMocksController
   include Authorization::AuthorizationHelper

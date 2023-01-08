@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require File.join(File.dirname(__FILE__), %w[development_support])
 
 module Authorization
@@ -72,7 +74,7 @@ module Authorization
       # Only groups directly adjacent approaches
       def group_approaches(approaches)
         approaches.each_with_object([]) do |approach, grouped|
-          if grouped.last && grouped.last.approach.similar_to(approach)
+          if grouped.last&.approach&.similar_to(approach)
             grouped.last.similar_approaches << approach
           else
             grouped << GroupedApproach.new(approach)
@@ -82,6 +84,7 @@ module Authorization
 
       class GroupedApproach
         attr_accessor :approach, :similar_approaches
+
         def initialize(approach)
           @approach = approach
           @similar_approaches = []
@@ -122,6 +125,7 @@ module Authorization
 
       class Test
         attr_reader :positive, :privilege, :context, :user
+
         def initialize(positive, privilege, options = {})
           @positive = positive
           @privilege = privilege
@@ -132,6 +136,7 @@ module Authorization
 
       class Approach
         attr_reader :steps, :engine, :users, :failed_tests
+
         def initialize(engine, users, steps)
           @engine = engine
           @users = users
@@ -258,7 +263,9 @@ module Authorization
         end
 
         def inspect
-          "#{self.class.name.demodulize} #{hash} #{to_a.hash} (#{to_a[1..-1].collect { |info| self.class.readable_info(info) } * ','})"
+          "#{self.class.name.demodulize} #{hash} #{to_a.hash} (#{to_a[1..-1].collect do |info|
+                                                                   self.class.readable_info(info)
+                                                                 end * ','})"
         end
 
         def to_a
@@ -297,7 +304,10 @@ module Authorization
         end
 
         def to_a
-          @actions.inject([]) { |memo, action| memo += action.to_a.first.is_a?(Enumerable) ? action.to_a : [action.to_a]; memo }
+          @actions.inject([]) do |memo, action|
+            memo += action.to_a.first.is_a?(Enumerable) ? action.to_a : [action.to_a]
+            memo
+          end
         end
 
         def hash
@@ -330,6 +340,7 @@ module Authorization
         end
 
         attr_reader :privilege, :context, :role
+
         def initialize(privilege_sym, context, role_sym)
           @privilege = privilege_sym
           @context = context
@@ -363,6 +374,7 @@ module Authorization
         end
 
         attr_reader :user, :role
+
         def initialize(user, role_sym)
           @user = user
           @role = role_sym
@@ -376,10 +388,14 @@ module Authorization
             cloned_user = @user.clone
             user_index = candidate.users.index(@user)
             raise "Cannot find #{@user.inspect} in users array" unless user_index
+
             candidate.users[user_index] = cloned_user
             # possible on real user objects?
             cloned_user.role_symbols << @role
-            raise 'User#role_symbols immutable or user only shallowly cloned!' if cloned_user.role_symbols == @user.role_symbols
+            if cloned_user.role_symbols == @user.role_symbols
+              raise 'User#role_symbols immutable or user only shallowly cloned!'
+            end
+
             true
           end
         end
@@ -417,6 +433,7 @@ module Authorization
         end
 
         attr_reader :user, :privilege, :context, :role
+
         def initialize(user, privilege_sym, context_sym, role_sym)
           @user = user
           @privilege = privilege_sym
@@ -457,6 +474,7 @@ module Authorization
         end
 
         attr_reader :user, :privilege, :context, :role
+
         def initialize(user, privilege_sym, context, role_sym)
           @user = user
           @privilege = privilege_sym
@@ -485,6 +503,7 @@ module Authorization
         end
 
         attr_reader :privilege, :context, :role
+
         def initialize(privilege_sym, context, role_sym)
           @privilege = privilege_sym
           @context = context
@@ -511,7 +530,8 @@ module Authorization
           privilege = candidate.failed_tests.first.privilege
           context = candidate.failed_tests.first.context
           user = candidate.failed_tests.first.user
-          roles_for_privilege = AnalyzerEngine::Role.all_for_privilege(privilege, context, candidate.engine).map(&:to_sym)
+          roles_for_privilege = AnalyzerEngine::Role.all_for_privilege(privilege, context,
+                                                                       candidate.engine).map(&:to_sym)
           user.role_symbols.collect { |role_sym| AnalyzerEngine::Role.for_sym(role_sym, candidate.engine) }
               .select { |role| roles_for_privilege.include?(role.to_sym) }
               .collect do |role|
@@ -520,6 +540,7 @@ module Authorization
         end
 
         attr_reader :user, :role
+
         def initialize(user, role_sym)
           @user = user
           @role = role_sym
@@ -530,9 +551,13 @@ module Authorization
           cloned_user = @user.clone
           user_index = candidate.users.index(@user)
           raise "Cannot find #{@user.inspect} in users array" unless user_index
+
           candidate.users[user_index] = cloned_user
           cloned_user.role_symbols.delete(@role)
-          raise 'User#role_symbols immutable or user only shallowly cloned!' if cloned_user.role_symbols == @user.role_symbols
+          if cloned_user.role_symbols == @user.role_symbols
+            raise 'User#role_symbols immutable or user only shallowly cloned!'
+          end
+
           true
         end
 
@@ -573,11 +598,11 @@ module Authorization
         abstract_actions.each do |abstract_action|
           abstract_action.specific_actions(candidate).each do |specific_action|
             child_candidate = candidate.dup
-            if !specific_action.resembles_any?(@prohibited_actions) &&
-               !child_candidate.reverse_of_previous?(specific_action) &&
-               child_candidate.apply(specific_action)
-              child_candidates << child_candidate
-            end
+            next unless !specific_action.resembles_any?(@prohibited_actions) &&
+                        !child_candidate.reverse_of_previous?(specific_action) &&
+                        child_candidate.apply(specific_action)
+
+            child_candidates << child_candidate
           end
         end
         child_candidates
@@ -633,8 +658,11 @@ module Authorization
 
       def self.relevant_roles(approach)
         (AnalyzerEngine.relevant_roles(approach.engine, approach.users) +
-            (approach.engine.roles.include?(:new_role_for_change_analyzer) ?
-               [AnalyzerEngine::Role.for_sym(:new_role_for_change_analyzer, approach.engine)] : [])).uniq
+            (if approach.engine.roles.include?(:new_role_for_change_analyzer)
+               [AnalyzerEngine::Role.for_sym(:new_role_for_change_analyzer, approach.engine)]
+             else
+               []
+             end)).uniq
       end
     end
   end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module AuthorizationRulesHelper
   def syntax_highlight(rules)
     regexps = {
@@ -8,14 +10,17 @@ module AuthorizationRulesHelper
       special: %w[user true false],
       preproc: ['do', 'end', /()(=&gt;)/, /()(\{)/, /()(\})/, /()(\[)/, /()(\])/],
       comment: [/()(#.*$)/] # ,
-      #:privilege => [:read],
-      #:context => [:conferences]
+      # :privilege => [:read],
+      # :context => [:conferences]
     }
     regexps.each do |name, res|
       res.each do |re|
         rules = rules.gsub(
-          re.is_a?(String) ? Regexp.new("(^|[^:])\\b(#{Regexp.escape(re)})\\b") :
-             (re.is_a?(Symbol) ? Regexp.new("()(:#{Regexp.escape(re.to_s)})\\b") : re),
+          if re.is_a?(String)
+            Regexp.new("(^|[^:])\\b(#{Regexp.escape(re)})\\b")
+          else
+            (re.is_a?(Symbol) ? Regexp.new("()(:#{Regexp.escape(re.to_s)})\\b") : re)
+          end,
           "\\1<span class=\"#{name}\">\\2</span>"
         )
       end
@@ -79,9 +84,15 @@ module AuthorizationRulesHelper
   end
 
   def privilege_color(privilege, context, role)
-    has_changed(:add_privilege, privilege, context, role) ? '#00dd00' :
-        (has_changed(:remove_privilege, privilege, context, role) ? '#dd0000' :
-          role_color(role))
+    if has_changed(:add_privilege, privilege, context, role)
+      '#00dd00'
+    else
+      (if has_changed(:remove_privilege, privilege, context, role)
+         '#dd0000'
+       else
+         role_color(role)
+       end)
+    end
   end
 
   def human_privilege(privilege)
@@ -99,9 +110,7 @@ module AuthorizationRulesHelper
   def human_privilege_context(privilege, context)
     human = [human_privilege(privilege), human_context(context)]
     begin
-      unless I18n.t(:verb_in_front_of_object, scope: :declarative_authorization, raise: true)
-        human.reverse!
-      end
+      human.reverse! unless I18n.t(:verb_in_front_of_object, scope: :declarative_authorization, raise: true)
     rescue StandardError
     end
     human * ' '
@@ -119,12 +128,14 @@ module AuthorizationRulesHelper
       dont_assign = prohibit_link(step[0, 3],
                                   "Add privilege <strong>#{h human_privilege_context(step[1], step[2])}</strong> to any role",
                                   "Don't suggest adding #{h human_privilege_context(step[1], step[2])}.", options)
-      "Add privilege <strong>#{h human_privilege_context(step[1], step[2])}</strong>#{dont_assign} to role <strong>#{h human_role(step[3].to_sym)}</strong>"
+      "Add privilege <strong>#{h human_privilege_context(step[1],
+                                                         step[2])}</strong>#{dont_assign} to role <strong>#{h human_role(step[3].to_sym)}</strong>"
     when :remove_privilege
       dont_remove = prohibit_link(step[0, 3],
                                   "Remove privilege <strong>#{h human_privilege_context(step[1], step[2])}</strong> from any role",
                                   "Don't suggest removing #{h human_privilege_context(step[1], step[2])}.", options)
-      "Remove privilege <strong>#{h human_privilege_context(step[1], step[2])}</strong>#{dont_remove} from role <strong>#{h human_role(step[3].to_sym)}</strong>"
+      "Remove privilege <strong>#{h human_privilege_context(step[1],
+                                                            step[2])}</strong>#{dont_remove} from role <strong>#{h human_role(step[3].to_sym)}</strong>"
     when :add_role
       "New role <strong>#{h human_role(step[1].to_sym)}</strong>"
     when :assign_role_to_user
@@ -144,10 +155,12 @@ module AuthorizationRulesHelper
   end
 
   def prohibit_link(step, text, title, options)
-    options[:with_removal] ?
-          link_to_function('[x]', "prohibit_action('#{serialize_action(step)}', '#{text}')",
-                           class: 'prohibit', title: title) :
-          ''
+    if options[:with_removal]
+      link_to_function('[x]', "prohibit_action('#{serialize_action(step)}', '#{text}')",
+                       class: 'prohibit', title: title)
+    else
+      ''
+    end
   end
 
   def readable_step_info(info)
@@ -197,9 +210,7 @@ module AuthorizationRulesHelper
 
   def auth_usage_info_title(auth_info)
     titles = []
-    if auth_usage_info_classes(auth_info) =~ /unprotected/
-      titles << 'No filter_access_to call protects this action'
-    end
+    titles << 'No filter_access_to call protects this action' if auth_usage_info_classes(auth_info) =~ /unprotected/
     if auth_usage_info_classes(auth_info) =~ /no-attribute-check/
       titles << 'Action is not protected with attribute check'
     end

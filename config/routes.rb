@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 if Authorization.activate_authorization_rules_browser?
   Rails.application.routes.draw do
     resources :authorization_rules, only: [:index] do
